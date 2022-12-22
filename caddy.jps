@@ -1,0 +1,54 @@
+type: install
+name: Caddy
+id: SCaddy
+version: 1.0.0
+description: Fichier d'Infrastructure As Code pour monter un envirronement Symfony avec un serveur Caddy sur Jelastic
+author: Christophe AURAND 
+skipNodeEmails: true
+nodes:
+- image: caddy:latest
+  nodeGroup: cp
+  fixedCloudlets: 1
+  flexibleCloudlets: 8
+  displayName: CaddyServer
+  volumes:
+      - /etc/caddy/Caddyfile
+      - /srv
+      - /data
+      - /config
+  ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+
+onInstall:
+  - symfony
+  - npm
+
+actions:
+  symfony:
+    cmd[cp]: |-
+      apk update
+      apk upgrade
+      apk add bash curl wget
+      apk add php8-phar php8-mbstring php8-openssl php8-intl php8-imagick php8-xsl php8-fpm php8-cli php8-gd
+      curl -sS https://getcomposer.org/installer | php
+      mv composer.phar /usr/bin/composer
+      chmod +x /usr/bin/composer
+      wget https://get.symfony.com/cli/installer -O - | bash && mv /root/.symfony5/bin/symfony /usr/local/bin/symfony
+    user: root
+    
+  npm:
+    cmd[cp]: |-
+      apk update
+      apk add nodejs npm
+
+onAfterInstall:
+  - restartContainers:
+    - nodeGroup: cp
+  - cmd[cp]:
+    - systemctl start caddy
+    - systemctl enable caddy
+
+success: Your Caddy environment is ready to go!
+
